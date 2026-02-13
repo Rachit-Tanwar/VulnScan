@@ -62,9 +62,13 @@ def write_csv(host, findings):
         writer.writerow(["host", "os", "timestamp", "id", "title", "severity", "cvss", "remediation", "evidence"])
         t_stmp = datetime.datetime.now().isoformat(timespec="seconds")
         for fi in findings:
-            writer.writerow([host["hostname"], host["os"], ts, fi.get("id", ""),
-                             fi.get("title", ""), fi.get("severity", ""), fi.get("cvss", ""),
-                            fi.get("remediation", "", fi.get("evidence", "")])
+            writer.writerow(
+                [
+                    host["hostname"], host["os"], t_stmp, fi.get("id", ""), 
+                    fi.get("title", ""), fi.get("severity", ""), fi.get("cvss", ""), 
+                    fi.get("remediation", ""), fi.get("evidence", "")
+                ]
+            )
 
 
 def group_by_severity(findings):
@@ -101,8 +105,8 @@ def main():
         findings = [{
             "id" : "RUNTIME-ERROR", "title" : "Runtime error while gathering checks.",
             "cvss" : 0.0, "severity" : "Low",
-            "remediation" : "Inspect debug.json; Run with Admin/sudo if needed"
-                "evidence" : traceback.format_exc()
+            "remediation" : "Inspect debug.json; Run with Admin/sudo if needed",
+            "evidence" : traceback.format_exc()
         }]
 
     with open("debug.json", 'w', encoding="utf-8") as fdj:
@@ -117,7 +121,7 @@ def main():
     context = {
         "host" : host, "findings" : findings, "by_sev" : group_by_severity(findings), "counts" : counts,
         "summary" : { "score" : score,"summary_text" : "Address Critical/High severity items first.\nLower score means higher risk."},
-        "top_recommendations" : top_recommendations(findings), "meta" : {"generated" : datetime.datetime.now()strftime("%Y-%m-%d %H:%M")}
+        "top_recommendations" : top_recommendations(findings), "meta" : {"generated" : datetime.datetime.now().strftime("%Y-%m-%d %H:%M")}
     }
 
     write_csv(host, findings)

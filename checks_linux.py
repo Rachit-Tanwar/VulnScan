@@ -51,7 +51,7 @@ def gather() -> dict:
     def get_val(key, default="unset"):
         m = re.search(rf"(?i)^s*{key}\s+(\S+)", ssh_cfg, re.MULTILINE)
         return m.group(1).lower() if m else default
-    
+
     permitroot = get_val("PermitRootLogin")
     pwauth = get_val("PasswordAuthentication")
     empty_pw = get_val("PermitEmptyPasswords")
@@ -59,8 +59,8 @@ def gather() -> dict:
 
     ok3, upd = _sh(
         "if command -v apt >/dev/null 2>&1; then apt lis --upgradable 2>/dev/null | wc -l; "
-            "elif command -v dnf >/dev/null 2>&1; then dnf check-update 2>/dev/null \ wc -l; "
-            "elif command -v yum >/dev/null 2>&1; then yum check-update 2>/dev/null \ wc -l; "
+            "elif command -v dnf >/dev/null 2>&1; then dnf check-update 2>/dev/null | wc -l; "
+            "elif command -v yum >/dev/null 2>&1; then yum check-update 2>/dev/null | wc -l; "
             "else echo unknown fi"
     )
 
@@ -84,8 +84,8 @@ def gather() -> dict:
     ok_mnt, mounts = _sh(r"findmnt -rno TARGET,OPTIONS | sed 's \+/ /g' || true")
 
     ok_aut, aut_hits = _sh("for m in $(findmnt -rno TARGET); do "
-                           " if [ -f \"$m/autorun.inf\" ]; then echo \"$m/autorun.inf\"; fi; "
-                           "done")
+        " if [ -f \"$m/autorun.inf\" ]; then echo \"$m/autorun.inf\"; fi; "
+        "done")
 
     return {
         "platform":"linux",
@@ -114,21 +114,21 @@ def analyze(data: dict) -> list[dict]:
         findings.append({"id":id_, "title":title, "cvss":cvss, "severity":sev, "remediation":remediation, "evidence":evidence})
 
     if str(data.get("ssh_permitrootlogin", "")).lower() != "no":
-            add("LINUX-SSH-ROOT","SSH PermitRootLogin is not 'no'",
+        add("LINUX-SSH-ROOT","SSH PermitRootLogin is not 'no'",
             "linux_permitroot_not_no","Set PermitRootLogin no and restart sshd.", f"PermitRootLogin={data.get('ssh_permitrootlogin')}")
-    
+
     if str(data.get("ssh_passwordauth","")).lower() != "no":
         add("LINUX-SSH-PWAUTH","SSH PasswordAuthentication is not 'no'",
             "linux_passwordauth_not_no","Disable PasswordAuthentication; use SSH keys.", f"PasswordAuthentication={data.get('ssh_passwordauth')}")
     if str(data.get("ssh_peritemptypasswords","")).lower() == "yes":
         add("LINUX-SSH-EMPTYPW","SSH PermitEmptyPasswords is 'yes'",
             "linux_peritemptypasswords_yes","Set PermitEmptyPasswords no.", f"PermitEmptyPasswords={data.get('ssh_peritemptypasswords')}")
-    
+
     prot = str(data.get("ssh_protocol","")).strip()
     if prot and prot != "2" and prot != "unset":
         add("LINUX-SSH-PROTO1","SSH Protocol 1 appears enabled",
             "linux_ssh_protocol1","Force Protocol 2 (Protocol 2).", f"Protocol={prot}")
-    
+
     ufw = data.get("ufw","").lower()
     firewalld = str(data.get("firewalld","")).strip().lower()
     if ("status: active" not in ufw) and (firewalld != "active"):
@@ -156,7 +156,7 @@ def analyze(data: dict) -> list[dict]:
         if p not in listen: 
             listen.append(p)
 
-     riskful = {
+    riskful = {
         22:   ("LINUX-NET-SSH",     "SSH (22) is listening","linux_listen_ssh",
                "If exposed, disable PasswordAuthentication; use keys; restrict via firewall."),
         21:   ("LINUX-NET-FTP",     "FTP (21) is listening","linux_listen_ftp",
@@ -185,7 +185,7 @@ def analyze(data: dict) -> list[dict]:
     for p, (fid, title, key, rem) in riskful.items():
         if p in listen:
             cvss, sev = map_config_to_cvss(key, None)
-            findings.append("id": fid, "title": title, "cvss": cvss, "severity": sev, "remediation": rem, "evidence": f"listening_port ={p}")
+            findings.append({"id": fid, "title": title, "cvss": cvss, "severity": sev, "remediation": rem, "evidence": f"listening_port ={p}"})
 
     lsblk = {}
     try:
@@ -218,7 +218,7 @@ def analyze(data: dict) -> list[dict]:
             if "children" in blk and isinstance(blk["children"], list):
                 walk_blk(blk["children"])
     walk_blk(lsblk.get("blockdevices", []))
-    
+
     for rmv in removable_mounts:
         mp = rmv["mount"]
         opts = mnt_opts.get(mp, "")
@@ -247,12 +247,10 @@ def analyze(data: dict) -> list[dict]:
                 "linux_removable_unencrypted_hint", "Use LUKS/cryptsetup for removable media that carry sensitive data", f"mount={mp}, fstype={fstype}")
 
     aut_lines = [l.strip() for l in (data.get("autorun_hits_raw", "") or "").splitlines() if l.strip()]
-    
+
     for pth in aut_lines:
         add("LINUX-USB-AUTORUN", f"autorun.inf found on removable mount ({pth})",
             "linux_removable_autorun_present", "Delete autorun.inf and scan the drive; ensure desktop auto-run is disabled.", f"path={pth}")
 
     return findings
-
-
 
