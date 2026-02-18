@@ -5,6 +5,14 @@ build/
 dist/
 wheels/
 *.egg-info
+.python-version
 
 # Virtual environments
 .venv
+uv.lock
+
+# Report and findings
+report.html
+findings.csv
+debug.json
+
